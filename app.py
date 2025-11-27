@@ -61,7 +61,6 @@ st.markdown("""
         border-radius: 12px;
         padding: 2rem;
         text-align: center;
-        transition: all 0.3s ease;
     }
     
     .upload-section:hover {
@@ -120,24 +119,23 @@ st.markdown("""
     
     /* Custom button styling */
     .stButton > button {
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        background: #0f172a;
         color: white;
         border: none;
         border-radius: 8px;
         padding: 0.5rem 1.5rem;
         font-weight: 600;
-        transition: all 0.3s ease;
     }
     
     .stButton > button:hover {
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        background: #0f172a;
         transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
     }
     
     /* Download button */
     .stDownloadButton > button {
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        background: #0f172a;
         color: white;
         border: none;
         border-radius: 8px;
