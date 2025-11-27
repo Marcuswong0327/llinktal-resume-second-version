@@ -1,12 +1,10 @@
-
-
 import streamlit as st
 import os
 from typing import List, Dict, Any
 
 from pdf_processor import extract_text_from_pdf
 from word_processor import extract_text_from_docx
-from ai_parser import process_resume, check_ai_credits
+from ai_parser import process_resume, check_ai_available
 from excel_exporter import export_to_excel, get_export_filename
 
 
@@ -28,7 +26,7 @@ st.markdown("""
     
     /* Header styling */
     .main-header {
-        background: #0f172a;
+        background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
         padding: 1.5rem 2rem;
         border-radius: 12px;
         margin-bottom: 2rem;
@@ -61,6 +59,7 @@ st.markdown("""
         border-radius: 12px;
         padding: 2rem;
         text-align: center;
+        transition: all 0.3s ease;
     }
     
     .upload-section:hover {
@@ -119,23 +118,24 @@ st.markdown("""
     
     /* Custom button styling */
     .stButton > button {
-        background: #0f172a;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
         color: white;
         border: none;
         border-radius: 8px;
         padding: 0.5rem 1.5rem;
         font-weight: 600;
+        transition: all 0.3s ease;
     }
     
     .stButton > button:hover {
-        background: #0f172a;
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
         transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
     }
     
     /* Download button */
     .stDownloadButton > button {
-        background: #0f172a;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
         color: white;
         border: none;
         border-radius: 8px;
@@ -273,9 +273,9 @@ def render_results_table(results: List[Dict[str, Any]]):
         
         table_data.append({
             "Status": status_badge,
-            "Name": r.get('name') or "Not found",
-            "Email": r.get('email') or "Not found",
-            "Phone": r.get('phone') or "Not found",
+            "Name": r.get('name') or "No text",
+            "Email": r.get('email') or "No text",
+            "Phone": r.get('phone') or "No text",
             "File": r.get('filename', 'Unknown'),
             "AI": "Yes" if r.get('ai_used') else "No",
             "Error": r.get('error') or ""
@@ -308,21 +308,21 @@ def main():
     # Render header
     render_header()
     
-    # Get API key from environment
+    # Get API key from environment (OpenRouter)
     api_key = os.environ.get('CLAUDE_SONNET_API_KEY', '')
     
-    # Check AI credits status
-    has_credits = True
-    credit_error = None
+    # Check AI availability
+    has_ai = True
+    ai_error = None
     if api_key:
-        has_credits, credit_error = check_ai_credits(api_key)
+        has_ai, ai_error = check_ai_available(api_key)
     
     # Layout
     col1, col2 = st.columns([2, 1])
     
     with col2:
         # Stats/Info panel
-        st.markdown("###Processing Status")
+        st.markdown("### Processing Status")
         
         total = len(st.session_state.results)
         successful = sum(1 for r in st.session_state.results if r['status'] == 'success')
@@ -339,8 +339,8 @@ def main():
         # Credit warning
         if not api_key:
             st.warning("⚠️ No OpenRouter API key configured. AI fallback is disabled.")
-        elif not has_credits:
-            st.error(f"🚫 {credit_error or 'AI credits unavailable'}")
+        elif not has_ai:
+            st.error(f"🚫 {ai_error or 'AI unavailable'}")
     
     with col1:
         # File uploader
