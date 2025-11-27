@@ -146,7 +146,7 @@ Return ONLY the JSON object, no other text."""
         response = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
             headers={
-                "Authorization": f"Bearer {CLAUDE_SONNET_API_KEY}",
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
                 "X-Title": "Resume Parser"
             },
@@ -214,7 +214,7 @@ def check_ai_credits(api_key: str) -> Tuple[bool, Optional[str]]:
         response = requests.get(
             "https://openrouter.ai/api/v1/auth/key",
             headers={
-                "Authorization": f"Bearer {CLAUDE_SONNET_API_KEY}",
+                "Authorization": f"Bearer {api_key}",
             },
             timeout=10
         )
