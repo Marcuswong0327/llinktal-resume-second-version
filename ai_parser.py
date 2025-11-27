@@ -1,11 +1,12 @@
 """
 AI Parser Module
-Uses regex patterns first, then falls back to OpenRouter Claude Sonnet
+Uses regex patterns first, then falls back to OpenRouter Claude Sonnet 4
 for extraction when regex fails.
 """
 
 import re
 import os
+import json
 import requests
 from typing import Optional, Dict, Any, Tuple
 
@@ -116,13 +117,15 @@ def extract_with_regex(text: str) -> Dict[str, Optional[str]]:
     }
 
 
-def extract_with_ai(text: str, api_key: str) -> Tuple[Dict[str, Optional[str]], bool, Optional[str]]:
+def extract_with_ai(text: str, api_key: str, missing_fields: list) -> Tuple[Dict[str, Optional[str]], bool, Optional[str]]:
     """
-    Extract information using OpenRouter Claude Sonnet API.
+    Extract information using OpenRouter Claude Sonnet 4 API.
+    Only extracts the specified missing fields.
     
     Args:
         text: Resume text to analyze
         api_key: OpenRouter API key
+        missing_fields: List of fields that need AI extraction
         
     Returns:
         Tuple of (extracted_data, success, error_message)
@@ -133,14 +136,18 @@ def extract_with_ai(text: str, api_key: str) -> Tuple[Dict[str, Optional[str]], 
     # Truncate text to avoid token limits
     text_truncated = text[:4000] if len(text) > 4000 else text
     
-    prompt = f"""Analyze this resume text and extract the following information. 
-Return ONLY a JSON object with these exact keys: "name", "email", "phone"
+    # Build dynamic prompt based on missing fields
+    fields_to_extract = ", ".join(f'"{f}"' for f in missing_fields)
+    
+    prompt = f"""Analyze this resume text and extract the following information: {fields_to_extract}
+
+Return ONLY a JSON object with these exact keys: {fields_to_extract}
 If any field cannot be found, use null for that field.
 
 Resume text:
 {text_truncated}
 
-Return ONLY the JSON object, no other text."""
+Return ONLY the JSON object, no other text or explanation."""
 
     try:
         response = requests.post(
@@ -173,8 +180,6 @@ Return ONLY the JSON object, no other text."""
         content = result.get('choices', [{}])[0].get('message', {}).get('content', '')
         
         # Parse JSON from response
-        import json
-        # Try to extract JSON from the response
         try:
             # Handle case where response has markdown code blocks
             if '```' in content:
@@ -183,14 +188,12 @@ Return ONLY the JSON object, no other text."""
                     content = content[4:]
             
             data = json.loads(content.strip())
-            return {
-                'name': data.get('name'),
-                'email': data.get('email'),
-                'phone': data.get('phone')
-            }, True, None
+            extracted = {}
+            for field in missing_fields:
+                extracted[field] = data.get(field)
+            return extracted, True, None
             
         except json.JSONDecodeError:
-            # Try to extract with regex as fallback
             return {}, False, "Failed to parse AI response"
             
     except requests.exceptions.Timeout:
@@ -199,12 +202,12 @@ Return ONLY the JSON object, no other text."""
         return {}, False, f"AI request failed: {str(e)}"
 
 
-def check_ai_credits(api_key: str) -> Tuple[bool, Optional[str]]:
+def check_ai_available(api_key: str) -> Tuple[bool, Optional[str]]:
     """
-    Check if the API key has available credits.
+    Check if the OpenRouter API key is available.
     
     Returns:
-        Tuple of (has_credits, error_message)
+        Tuple of (is_available, error_message)
     """
     if not api_key:
         return False, "No API key configured"
@@ -241,6 +244,8 @@ def check_ai_credits(api_key: str) -> Tuple[bool, Optional[str]]:
 def process_resume(text: str, api_key: Optional[str] = None) -> Dict[str, Any]:
     """
     Process resume text: try regex first, fallback to AI if needed.
+    If regex returns None (not found), try AI extraction.
+    If AI also fails, return None (displayed as "No text").
     
     Args:
         text: Resume text
@@ -261,18 +266,22 @@ def process_resume(text: str, api_key: Optional[str] = None) -> Dict[str, Any]:
     regex_result = extract_with_regex(text)
     result.update(regex_result)
     
-    # Step 2: If any field is missing, try AI
-    missing_fields = [k for k in ['name', 'email', 'phone'] if not result[k]]
+    # Step 2: Check which fields are missing (regex returned None)
+    missing_fields = [k for k in ['name', 'email', 'phone'] if result[k] is None]
     
+    # Step 3: If any field is missing and we have API key, try AI fallback
     if missing_fields and api_key:
-        ai_result, success, error = extract_with_ai(text, api_key)
+        ai_result, success, error = extract_with_ai(text, api_key, missing_fields)
         
         if success:
             result['ai_used'] = True
-            # Fill in missing fields from AI
+            # Fill in missing fields from AI (only if AI found something)
             for field in missing_fields:
-                if ai_result.get(field):
-                    result[field] = ai_result[field]
+                ai_value = ai_result.get(field)
+                if ai_value:
+                    result[field] = ai_value
+                # If AI also returns None/null, result[field] stays None
+                # This will be displayed as "No text" in the UI
         elif error:
             result['error'] = error
     
