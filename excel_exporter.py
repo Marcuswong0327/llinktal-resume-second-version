@@ -4,7 +4,7 @@ Exports extracted resume data to Excel format.
 """
 
 from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.styles import Font, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 import io
 from typing import List, Dict, Any
@@ -30,9 +30,8 @@ def export_to_excel(data: List[Dict[str, Any]]) -> bytes:
     ws = wb.active
     ws.title = "Candidates"
     
-    # Define styles
-    header_font = Font(bold=True, color="FFFFFF", size=11)
-    header_fill = PatternFill(start_color="1E3A5F", end_color="1E3A5F", fill_type="solid")
+    # Define styles - headers only bold, no background color
+    header_font = Font(bold=True, size=11)
     header_alignment = Alignment(horizontal="center", vertical="center")
     
     cell_alignment = Alignment(horizontal="left", vertical="center")
@@ -44,29 +43,28 @@ def export_to_excel(data: List[Dict[str, Any]]) -> bytes:
         bottom=Side(style='thin', color='CCCCCC')
     )
     
-    # Headers
+    # Headers - only bold, no background fill
     headers = ["Names", "Email", "Phone Numbers", "FileName"]
     for col, header in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col, value=header)
         cell.font = header_font
-        cell.fill = header_fill
         cell.alignment = header_alignment
         cell.border = thin_border
     
     # Data rows
     for row_idx, item in enumerate(data, 2):
-        # Names
-        name_cell = ws.cell(row=row_idx, column=1, value=item.get('name') or "Not found")
+        # Names - display "No text" if None
+        name_cell = ws.cell(row=row_idx, column=1, value=item.get('name') or "No text")
         name_cell.alignment = cell_alignment
         name_cell.border = thin_border
         
-        # Email
-        email_cell = ws.cell(row=row_idx, column=2, value=item.get('email') or "Not found")
+        # Email - display "No text" if None
+        email_cell = ws.cell(row=row_idx, column=2, value=item.get('email') or "No text")
         email_cell.alignment = cell_alignment
         email_cell.border = thin_border
         
-        # Phone Numbers
-        phone_cell = ws.cell(row=row_idx, column=3, value=item.get('phone') or "Not found")
+        # Phone Numbers - display "No text" if None
+        phone_cell = ws.cell(row=row_idx, column=3, value=item.get('phone') or "No text")
         phone_cell.alignment = cell_alignment
         phone_cell.border = thin_border
         
@@ -79,12 +77,6 @@ def export_to_excel(data: List[Dict[str, Any]]) -> bytes:
         file_cell = ws.cell(row=row_idx, column=4, value=filename)
         file_cell.alignment = cell_alignment
         file_cell.border = thin_border
-        
-        # Highlight rows with errors
-        if error:
-            error_fill = PatternFill(start_color="FFE6E6", end_color="FFE6E6", fill_type="solid")
-            for col in range(1, 5):
-                ws.cell(row=row_idx, column=col).fill = error_fill
     
     # Auto-adjust column widths
     column_widths = [30, 35, 20, 45]  # Approximate widths
